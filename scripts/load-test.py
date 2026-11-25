@@ -2,6 +2,7 @@
 """Run a small, dependency-free HTTP load test against the local application."""
 
 import argparse
+from http.client import HTTPException
 import math
 import sys
 import time
@@ -18,11 +19,14 @@ def fetch(url: str, timeout: float) -> tuple[bool, float, int | None]:
         request = Request(url, headers={"User-Agent": "request-portal-load-test/1.0"})
         with urlopen(request, timeout=timeout) as response:
             status = response.status
+            response.read()
             success = 200 <= status < 300
     except HTTPError as error:
         status = error.code
+        with error:
+            error.read()
         success = False
-    except (URLError, TimeoutError, OSError):
+    except (HTTPException, URLError, TimeoutError, OSError):
         success = False
 
     return success, (time.perf_counter() - started) * 1000, status
